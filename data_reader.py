@@ -167,19 +167,17 @@ def process_data():
         while len(collected_data) < 800:
             if not data_queue.empty():
                 data = data_queue.get(block=False)
-                # print((data_queue.qsize()))
-                # print(type(data))
-                # these values are not available in nProbe Pro. Have to take avg from dataset
-                print(data['idx'])
+
+                #deleting extra values in captured data
                 data.pop('idx', None)
                 data.pop('IPV6_SRC_ADDR', None)
                 data.pop('IPV6_DST_ADDR', None)
+
+                # these values are not available in nProbe Pro. Have to take avg from dataset
                 data['DNS_QUERY_ID'] = 0
                 data['DNS_QUERY_TYPE'] = 0
                 data['DNS_TTL_ANSWER'] = 0
                 data['FTP_COMMAND_RET_CODE'] = random_ftp_command_ret_code_generator()
-
-                # for sake of simplicity
                 data['Label'] = 0
                 data['Attack'] = 'Benign'
                 collected_data.append(data);
@@ -188,8 +186,6 @@ def process_data():
         
         if len(collected_data) == 0 :
            continue
-
-        # print(collected_data)
 
         string_data_list = [{key: str(value) for key, value in d.items()} for d in collected_data]
 
