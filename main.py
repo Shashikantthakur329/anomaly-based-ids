@@ -26,6 +26,7 @@ encodings = [
     RecordLevelEmbed(64, project=True)
 ]
 
+
 classification_heads = [
     LastTokenClassificationHead(),
     FlattenClassificationHead(),
@@ -46,8 +47,8 @@ flow_file_path = "../dataset/cleansed_dataset/train"
 datasets = [
     ("CSE_CIC_IDS", os.path.join(flow_file_path, "output.csv"), NamedDatasetSpecifications.unified_flow_format,0.06, EvaluationDatasetSampling.LastRows),
     # ("UNSW_2018_IoT_Botnet_Full5pc_1.csv", os.path.join(flow_file_path, "UNSW_2018_IoT_Botnet_Full5pc_1.csv"), NamedDatasetSpecifications.nsl_kdd, 0.05, EvaluationDatasetSampling.RandomRows),
-    ("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "initial_dataset_1.csv"), NamedDatasetSpecifications.unified_flow_format, 0.1, EvaluationDatasetSampling.LastRows)
-    #("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "NF-UNSW-NB15-v2.csv"), NamedDatasetSpecifications.unified_flow_format, 0.1, EvaluationDatasetSampling.LastRows)
+    ("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "initial_dataset.csv"), NamedDatasetSpecifications.unified_flow_format, 0.98, EvaluationDatasetSampling.LastRows)
+    # ("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "NF-UNSW-NB15-v2.csv"), NamedDatasetSpecifications.unified_flow_format, 0.1, EvaluationDatasetSampling.LastRows)
 ]
 
 # NF-UNSW-NB15-v2
@@ -79,10 +80,11 @@ custom_obj = {
 
 
 # Load the specific dataset
-df = pd.read_csv("../dataset/cleansed_dataset/train/initial_dataset.csv")
+df = pd.read_csv("../dataset/cleansed_dataset/train/initial_dataset_1.csv")
 dataset_name, dataset_path, dataset_specification, eval_percent, eval_method = datasets[1]
 # ft.load_dataset(dataset_name, dataset_path, dataset_specification, evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent)
-preprocessed_df = ft.load_dataset(dataset_name, df, dataset_specification, evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent);
+print("asdasdASDASDASDASD");
+preprocessed_df = ft.load_dataset(dataset_name, dataset_path, dataset_specification, evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent);
 print(df.head())
 print("$$$$$$$$$$$$$$$$$")
 print("$$$$$$$$$$$$$$$$$")
@@ -90,7 +92,7 @@ print("$$$$$$$$$$$$$$$$$")
 print("$$$$$$$$$$$$$$$$$")
 print("$$$$$$$$$$$$$$$$$")
 print("$$$$$$$$$$$$$$$$$")
-print(preprocessed_df.shape)
+print(preprocessed_df.columns)
 print(preprocessed_df.head())
 
 
@@ -110,10 +112,11 @@ l_m.compile(optimizer = "adam", loss = 'binary_crossentropy', metrics=['binary_a
 # (train_results, eval_results, final_epoch) = ft.evaluate(l_m, batch_size=128, epochs=20, steps_per_epoch=64, early_stopping_patience=5)
 # print(eval_results)
 
-a = ft.predict(l_m, batch_size = 128)
-"""
-"""
+a = ft.predict(l_m, batch_size=128, epochs=20, steps_per_epoch=64, early_stopping_patience=5)
 
+
+"""
+"""
 
 """
 m.compile(optimizer="adam", loss='binary_crossentropy', metrics=['binary_accuracy'], jit_compile=True)
@@ -123,8 +126,9 @@ eval_results: pd.DataFrame
 (train_results, eval_results, final_epoch) = ft.evaluate(m, batch_size=128, epochs=20, steps_per_epoch=64, early_stopping_patience=5)
 print(eval_results)
 
-m.save('./integer_encoded_model.keras')
+m.save('./without_ftp_command_ret_code.keras')
 """
+
 
 
 

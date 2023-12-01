@@ -471,6 +471,8 @@ class FlowTransformer:
         df, model_input_spec = self._load_preprocessed_dataset(dataset_name, dataset, specification, cache_folder, n_rows, evaluation_dataset_sampling, evaluation_percent, numerical_filter)
 
         training_mask = df["__training"].values
+        # print(df['__training'])
+        # print(len(np.argwhere(training_mask & 1)));
         del df["__training"]
 
         y = df["__y"].values
@@ -484,15 +486,15 @@ class FlowTransformer:
         return df
         
 
+ 
 
-
-    def predict(self, m:keras.Model, batch_size):
+    def predict(self, m:keras.Model, batch_size, early_stopping_patience:int=5, epochs:int=100, steps_per_epoch:int=128):
         n_malicious_per_batch = int(0.5 * batch_size)
         n_legit_per_batch = batch_size - n_malicious_per_batch
 
         overall_y_preserve = np.zeros(dtype="float32", shape=(n_malicious_per_batch + n_legit_per_batch,))
         overall_y_preserve[:n_malicious_per_batch] = 1.
-
+ 
         selectable_mask = np.zeros(len(self.X), dtype=bool)
         selectable_mask[self.parameters.window_size:-self.parameters.window_size] = True
         train_mask = self.training_mask
@@ -500,11 +502,14 @@ class FlowTransformer:
         y_mask = ~(self.y.astype('str') == str(self.dataset_specification.benign_label))
 
         indices_train = np.argwhere(train_mask).reshape(-1)
+        # print(indices_train)
         malicious_indices_train = np.argwhere(train_mask & y_mask & selectable_mask).reshape(-1)
         legit_indices_train = np.argwhere(train_mask & ~y_mask & selectable_mask).reshape(-1)
 
         indices_test:np.ndarray = np.argwhere(~train_mask).reshape(-1)
-        
+        # indices_test:np.ndarray = np.hstack((indices_train, indices_test)).reshape(-1)
+
+        # print(indices_test)
         def get_windows_for_indices(indices:np.ndarray, ordered) -> List[pd.DataFrame]:
             X: List[pd.DataFrame] = []
 
@@ -527,8 +532,9 @@ class FlowTransformer:
         feature_columns_map = {}
 
         def samplewise_to_featurewise(X):
-            sequence_length = len(X[0])
-
+            # print(X[0])
+            sequence_length = len(X[1])
+            # print(sequence_length)
             combined_df = pd.concat(X)
 
             featurewise_X = []
@@ -552,64 +558,135 @@ class FlowTransformer:
             return featurewise_X
         
 
-
+        # print()
         eval_X = get_windows_for_indices(indices_test, True)
         print(f"Splitting dataset to featurewise...")
         eval_featurewise_X = samplewise_to_featurewise(eval_X)
-
+        # print(len(eval_featurewise_X))
+        # print(eval_featurewise_X)
         # print(f"Building eval dataset...")
-        # eval_X = get_windows_for_indices(indices_test, True)
-        # print(f"Splitting dataset to featurewise...")
-        # eval_featurewise_X = samplewise_to_featurewise(eval_X)
+
         eval_y = y_mask[indices_test]
         eval_P = eval_y
         n_eval_P = np.count_nonzero(eval_P)
         eval_N = ~eval_y
         n_eval_N = np.count_nonzero(eval_N)
-        print(f"Evaluation dataset is built!")
+        print(f"Prediction dataset is built!")
 
-        # print(f"Positive samples in eval set: {n_eval_P}")
-        # print(f"Negative samples in eval set: {n_eval_N}")
 
-        # print(len(eval_featurewise_X[0][0]))
-        #eval_featurewise_X (37,4960,8)
+        epoch_results = []
+        def run_evaluation(epoch):
+            pred_y = m.predict(eval_featurewise_X, verbose=True)
+            pred_y = pred_y.reshape(-1) > 0.5
 
-        
-        pred_y = m.predict(eval_featurewise_X, verbose=True)
-        pred_y = pred_y.reshape(-1) > 0.5
+            pred_P = pred_y
+            n_pred_P = np.count_nonzero(pred_P)
 
-        pred_P = pred_y
-        n_pred_P = np.count_nonzero(pred_P)
+            pred_N = ~pred_y
+            n_pred_N = np.count_nonzero(pred_N)
 
-        pred_N = ~pred_y
-        n_pred_N = np.count_nonzero(pred_N)
+            epoch_results.append({
+                "positive":n_pred_P,
+                "negative":n_pred_N
+            })
 
-        print(pred_y)
-        print("n_pred_P: " + str(n_pred_P))
-        print("n_pred_N: " + str(n_pred_N))
-  
+        run_evaluation(1)
+        class BatchYielder():
+            def __init__(self, ordered, random, rs):
+                self.ordered = ordered
+                self.random = random
+                self.cursor_malicious = 0
+                self.cursor_legit = 0
+                self.rs = rs
 
-        """
-        TP = np.count_nonzero(pred_P & eval_P)
-        FP = np.count_nonzero(pred_P & ~eval_P)
-        TN = np.count_nonzero(pred_N & eval_N)
-        FN = np.count_nonzero(pred_N & ~eval_N)
+            def get_batch(self):
+                malicious_indices_batch = self.rs.choice(malicious_indices_train, size=n_malicious_per_batch,
+                                                         replace=False) \
+                    if self.random else \
+                    malicious_indices_train[self.cursor_malicious:self.cursor_malicious + n_malicious_per_batch]
 
-        sensitivity = TP / (TP + FN) if (TP + FN) > 0 else 0
-        specificity = TN / (TN + FP) if (TN + FP) > 0 else 0
-        balanced_accuracy = (sensitivity + specificity) / 2
+                legitimate_indices_batch = self.rs.choice(legit_indices_train, size=n_legit_per_batch, replace=False) \
+                    if self.random else \
+                    legit_indices_train[self.cursor_legit:self.cursor_legit + n_legit_per_batch]
 
-        precision = TP / (TP + FP) if (TP + FP) > 0 else 0
-        recall = TP / (TP + FN) if (TP + FN) > 0 else 0
-        print("precision" + str(precision))
-        print("recall" + str(recall))
-        print("balanced_accuracy" + str(balanced_accuracy))
-        print("sensitivity" + str(sensitivity))
-        f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-        print("f1_score" + str(f1_score))
-        print(f"predictions: {pred_y.shape}, overall balanced accuracy: {balanced_accuracy * 100:.2f}%, TP = {TP:,} / {n_eval_P:,}, TN = {TN:,} / {n_eval_N:,}")
-        """
-        
+                indices = np.concatenate([malicious_indices_batch, legitimate_indices_batch])
+
+                self.cursor_malicious = self.cursor_malicious + n_malicious_per_batch
+                self.cursor_malicious = self.cursor_malicious % (len(malicious_indices_train) - n_malicious_per_batch)
+
+                self.cursor_legit = self.cursor_legit + n_legit_per_batch
+                self.cursor_legit = self.cursor_legit % (len(legit_indices_train) - n_legit_per_batch)
+
+                X = get_windows_for_indices(indices, self.ordered)
+                # each x in X contains a dataframe, with window_size rows and all the features of the flows. There are batch_size of these.
+
+                # we have a dataframe containing batch_size x (window_size, features)
+                # we actually want a result of features x (batch_size, sequence_length, feature_dimension)
+                featurewise_X = samplewise_to_featurewise(X)
+
+                return featurewise_X, overall_y_preserve
+ 
+        # batch_yielder = BatchYielder(self.parameters._train_ensure_flows_are_ordered_within_windows, not self.parameters._train_draw_sequential_windows, self.rs)
+
+        # min_loss = 100
+        # iters_since_loss_decrease = 0
+
+        # train_results = []
+        # final_epoch = 0
+
+        # last_print = time.time()
+        # elapsed_time = 0
+
+        # for epoch in range(epochs):
+        #     final_epoch = epoch
+
+        #     has_reduced_loss = False
+        #     for step in range(steps_per_epoch):
+        #         batch_X, batch_y = batch_yielder.get_batch()
+
+        #         t0 = time.time()
+        #         batch_results = m.train_on_batch(batch_X, batch_y)
+        #         t1 = time.time()
+
+        #         if epoch > 0 or step > 0:
+        #             elapsed_time += (t1 - t0)
+        #             if epoch == 0 and step == 1:
+        #                 # include time for last "step" that we skipped with step > 0 for epoch == 0
+        #                 elapsed_time *= 2
+
+        #         train_results.append(batch_results + [elapsed_time, epoch])
+
+        #         batch_loss = batch_results[0] if isinstance(batch_results, list) else batch_results
+
+        #         if time.time() - last_print > 3:
+        #             last_print = time.time()
+        #             early_stop_phrase = "" if early_stopping_patience <= 0 else f" (early stop in {early_stopping_patience - iters_since_loss_decrease:,})"
+        #             print(f"Epoch = {epoch:,} / {epochs:,}{early_stop_phrase}, step = {step}, loss = {batch_loss:.5f}, results = {batch_results} -- elapsed (train): {elapsed_time:.2f}s")
+
+        #         if batch_loss < min_loss:
+        #             has_reduced_loss = True
+        #             min_loss = batch_loss
+
+        #     if has_reduced_loss:
+        #         iters_since_loss_decrease = 0
+        #     else:
+        #         iters_since_loss_decrease += 1
+
+        #     do_early_stop = early_stopping_patience > 0 and iters_since_loss_decrease > early_stopping_patience
+        #     is_last_epoch = epoch == epochs - 1
+        #     run_eval = epoch in [6] or is_last_epoch or do_early_stop
+
+        #     if run_eval:
+        #         run_evaluation(epoch)
+
+        #     if do_early_stop:
+        #         print(f"Early stopping at epoch: {epoch}")
+        #         break
+
+        eval_results = pd.DataFrame(epoch_results)
+        print(eval_results)
+        return (eval_results)
+     
 
 
     def evaluate(self, m:keras.Model, batch_size, early_stopping_patience:int=5, epochs:int=100, steps_per_epoch:int=128):
@@ -924,7 +1001,7 @@ class FlowTransformer:
 
                 self.cursor_legit = self.cursor_legit + n_legit_per_batch
                 self.cursor_legit = self.cursor_legit % (len(legit_indices_train) - n_legit_per_batch)
-
+                
                 X = get_windows_for_indices(indices, self.ordered)
                 # each x in X contains a dataframe, with window_size rows and all the features of the flows. There are batch_size of these.
 

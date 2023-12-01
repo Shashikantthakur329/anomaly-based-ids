@@ -57,7 +57,7 @@ def fetch_data():
 
             with connection.cursor() as cursor:
                 # query = "SELECT * FROM flow4_flows limit 5;"
-                query = "SELECT * FROM flow4_flows where idx > %s LIMIT 1;"
+                query = "SELECT * FROM flow4_flows where idx > %s LIMIT 4;"
 
                 cursor.execute(query, (last_fetched_id,))
                 rows = cursor.fetchall()
@@ -71,7 +71,9 @@ def fetch_data():
         except pymysql.Error as err:
             print(f"Error: {err}")
 
-        # time.sleep(0.1)
+
+
+        # time.sleep(1)
 
 
 ############################
@@ -109,7 +111,7 @@ datasets = [
      NamedDatasetSpecifications.unified_flow_format, 0.06, EvaluationDatasetSampling.LastRows),
     # ("UNSW_2018_IoT_Botnet_Full5pc_1.csv", os.path.join(flow_file_path, "UNSW_2018_IoT_Botnet_Full5pc_1.csv"), NamedDatasetSpecifications.nsl_kdd, 0.05, EvaluationDatasetSampling.RandomRows),
     ("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "initial_dataset_1.csv"),
-     NamedDatasetSpecifications.unified_flow_format, 0.1, EvaluationDatasetSampling.LastRows)
+     NamedDatasetSpecifications.unified_flow_format, 0.94, EvaluationDatasetSampling.LastRows)
     # ("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "NF-UNSW-NB15-v2.csv"), NamedDatasetSpecifications.unified_flow_format, 0.1, EvaluationDatasetSampling.LastRows)
 ]
 
@@ -164,11 +166,12 @@ def process_data():
         # print("##############")
         collected_data = []
 
-        while len(collected_data) < 800:
+        while len(collected_data) < 100:
             if not data_queue.empty():
                 data = data_queue.get(block=False)
 
                 #deleting extra values in captured data
+                # print(data['idx'])
                 data.pop('idx', None)
                 data.pop('IPV6_SRC_ADDR', None)
                 data.pop('IPV6_DST_ADDR', None)
@@ -196,25 +199,31 @@ def process_data():
         # del df['IPV6_DST_ADDR']
         print((df.shape))
 
-        col_order = ['IPV4_SRC_ADDR', 'L4_SRC_PORT', 'IPV4_DST_ADDR', 'L4_DST_PORT',
-       'PROTOCOL', 'L7_PROTO', 'IN_BYTES', 'IN_PKTS', 'OUT_BYTES', 'OUT_PKTS',
-       'TCP_FLAGS', 'CLIENT_TCP_FLAGS', 'SERVER_TCP_FLAGS',
-       'FLOW_DURATION_MILLISECONDS', 'DURATION_IN', 'DURATION_OUT', 'MIN_TTL',
-       'MAX_TTL', 'LONGEST_FLOW_PKT', 'SHORTEST_FLOW_PKT', 'MIN_IP_PKT_LEN',
-       'MAX_IP_PKT_LEN', 'SRC_TO_DST_SECOND_BYTES', 'DST_TO_SRC_SECOND_BYTES',
-       'RETRANSMITTED_IN_BYTES', 'RETRANSMITTED_IN_PKTS',
-       'RETRANSMITTED_OUT_BYTES', 'RETRANSMITTED_OUT_PKTS',
-       'SRC_TO_DST_AVG_THROUGHPUT', 'DST_TO_SRC_AVG_THROUGHPUT',
-       'NUM_PKTS_UP_TO_128_BYTES', 'NUM_PKTS_128_TO_256_BYTES',
-       'NUM_PKTS_256_TO_512_BYTES', 'NUM_PKTS_512_TO_1024_BYTES',
-       'NUM_PKTS_1024_TO_1514_BYTES', 'TCP_WIN_MAX_IN', 'TCP_WIN_MAX_OUT',
-       'ICMP_TYPE', 'ICMP_IPV4_TYPE', 'DNS_QUERY_ID', 'DNS_QUERY_TYPE',
-       'DNS_TTL_ANSWER', 'FTP_COMMAND_RET_CODE', 'Label', 'Attack']
-        df = df[col_order]
+    #     col_order = ['IPV4_SRC_ADDR', 'L4_SRC_PORT', 'IPV4_DST_ADDR', 'L4_DST_PORT',
+    #    'PROTOCOL', 'L7_PROTO', 'IN_BYTES', 'IN_PKTS', 'OUT_BYTES', 'OUT_PKTS',
+    #    'TCP_FLAGS', 'CLIENT_TCP_FLAGS', 'SERVER_TCP_FLAGS',
+    #    'FLOW_DURATION_MILLISECONDS', 'DURATION_IN', 'DURATION_OUT', 'MIN_TTL',
+    #    'MAX_TTL', 'LONGEST_FLOW_PKT', 'SHORTEST_FLOW_PKT', 'MIN_IP_PKT_LEN',
+    #    'MAX_IP_PKT_LEN', 'SRC_TO_DST_SECOND_BYTES', 'DST_TO_SRC_SECOND_BYTES',
+    #    'RETRANSMITTED_IN_BYTES', 'RETRANSMITTED_IN_PKTS',
+    #    'RETRANSMITTED_OUT_BYTES', 'RETRANSMITTED_OUT_PKTS',
+    #    'SRC_TO_DST_AVG_THROUGHPUT', 'DST_TO_SRC_AVG_THROUGHPUT',
+    #    'NUM_PKTS_UP_TO_128_BYTES', 'NUM_PKTS_128_TO_256_BYTES',
+    #    'NUM_PKTS_256_TO_512_BYTES', 'NUM_PKTS_512_TO_1024_BYTES',
+    #    'NUM_PKTS_1024_TO_1514_BYTES', 'TCP_WIN_MAX_IN', 'TCP_WIN_MAX_OUT',
+    #    'ICMP_TYPE', 'ICMP_IPV4_TYPE', 'DNS_QUERY_ID', 'DNS_QUERY_TYPE',
+    #    'DNS_TTL_ANSWER', 'FTP_COMMAND_RET_CODE', 'Label', 'Attack']
+    #     df = df[col_order]
 
         # print(df.head())
         df.to_csv('./temp.csv')
+        # print(type(df['MAX_TTL']));
+        # print(type(df))
         df1 = pd.read_csv("./temp.csv")
+        # df1 = df;
+        # print(type(df1['MAX_TTL']));
+        # print(type(df1))
+
         # df1 = pd.read_csv("../dataset/cleansed_dataset/train/initial_dataset_1.csv")
         # print(df1.columns)
         # for col in df.columns:
@@ -224,12 +233,13 @@ def process_data():
         dataset_name, dataset_path, dataset_specification, eval_percent, eval_method = datasets[1]
         # ft.load_dataset(dataset_name, dataset_path, dataset_specification, evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent)
         preprocessed_df = ft.load_dataset(dataset_name, df1, dataset_specification,evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent)
-        print(df.head())
-        print(preprocessed_df.head())
+        # print(df.head())
+        # print(preprocessed_df.head())
 
         # m = ft.build_model()
 
         a = ft.predict(l_m, batch_size=128)
+        # time.sleep(1)
         """
         """
 
