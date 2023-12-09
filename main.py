@@ -26,7 +26,6 @@ encodings = [
     RecordLevelEmbed(64, project=True)
 ]
 
-
 classification_heads = [
     LastTokenClassificationHead(),
     FlattenClassificationHead(),
@@ -44,11 +43,13 @@ transformers = [
 ]
 
 flow_file_path = "../dataset/cleansed_dataset/train"
+new_path = "./dataset/JIIS23-dataset-main/case1"
 datasets = [
     ("CSE_CIC_IDS", os.path.join(flow_file_path, "output.csv"), NamedDatasetSpecifications.unified_flow_format,0.06, EvaluationDatasetSampling.LastRows),
     # ("UNSW_2018_IoT_Botnet_Full5pc_1.csv", os.path.join(flow_file_path, "UNSW_2018_IoT_Botnet_Full5pc_1.csv"), NamedDatasetSpecifications.nsl_kdd, 0.05, EvaluationDatasetSampling.RandomRows),
-    ("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "initial_dataset.csv"), NamedDatasetSpecifications.unified_flow_format, 0.98, EvaluationDatasetSampling.LastRows)
+    # ("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "initial_dataset.csv"), NamedDatasetSpecifications.unified_flow_format, 0.98, EvaluationDatasetSampling.LastRows)
     # ("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "NF-UNSW-NB15-v2.csv"), NamedDatasetSpecifications.unified_flow_format, 0.1, EvaluationDatasetSampling.LastRows)
+    ("JIIS-MAIN", os.path.join(new_path, "27_filtered_33perc_stego_original.csv"), NamedDatasetSpecifications.jiis_main, 0.98, EvaluationDatasetSampling.LastRows)
 ]
 
 # NF-UNSW-NB15-v2
@@ -102,6 +103,7 @@ print(preprocessed_df.head())
 m = ft.build_model()
 #print(m.dir())
 #m.summary()
+"""
 
 l_m = keras.saving.load_model("integer_encoded_model.keras",compile=True,safe_mode = False, custom_objects = custom_obj)
 print(l_m.summary())
@@ -114,10 +116,10 @@ l_m.compile(optimizer = "adam", loss = 'binary_crossentropy', metrics=['binary_a
 
 a = ft.predict(l_m, batch_size=128, epochs=20, steps_per_epoch=64, early_stopping_patience=5)
 
-
-"""
 """
 
+
+"""
 """
 m.compile(optimizer="adam", loss='binary_crossentropy', metrics=['binary_accuracy'], jit_compile=True)
 
@@ -126,8 +128,7 @@ eval_results: pd.DataFrame
 (train_results, eval_results, final_epoch) = ft.evaluate(m, batch_size=128, epochs=20, steps_per_epoch=64, early_stopping_patience=5)
 print(eval_results)
 
-m.save('./without_ftp_command_ret_code.keras')
-"""
+m.save('./JIIS.keras')
 
 
 

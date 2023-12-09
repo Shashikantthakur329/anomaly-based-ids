@@ -168,6 +168,22 @@ class NamedDatasetSpecifications:
         test_column='is_test'
     )
 
+    jiis_main = DatasetSpecification(
+        include_fields=['num_pkts', 'avg_ttl',	'median_ttl', '10_percentil_ttl', '25_percentil_ttl', '75_percentil_ttl' ,'90_percentil_ttl' ,'max_ttl', 'min_ttl'],
+        categorical_fields=['timestamp'],
+        class_column='attack',
+        benign_label='No',
+    )
+    # bot_iot = DatasetSpecification(
+    #     include_fields=['Dpkts','Sbytes','Dbytes','Rate','Srate','Drate','TnBPSrcIP','TnBPDstIP','TnP_PSrcIP','TnP_PDstIP','TnP_PerProto','TnP_Per_Dport','AR_P_Proto_P_SrcIP','AR_P_Proto_P_DstIP','N_IN_Conn_P_SrcIP','N_IN_Conn_P_DstIP','AR_P_Proto_P_Sport','AR_P_Proto_P_Dport','Pkts_P_State_P_Protocol_P_DestIP','Pkts_P_State_P_Protocol_P_SrcIP','Attack','Category','Subcategory'],
+    #     categorical_fields=['protocol_type', 'service', 'flag', 'land', 'logged_in', 'is_host_login', 'is_guest_login'],
+    #     benign_label='normal',
+    #     class_column='class',
+    #     test_column='is_test'
+    #     )
+
+
+
 class FlowTransformerParameters:
     def __init__(self, window_size:int, mlp_layer_sizes:List[int], mlp_dropout:float=0.1):
         self.window_size:int = window_size
