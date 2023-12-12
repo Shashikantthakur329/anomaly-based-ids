@@ -8,7 +8,7 @@
 - Model is also performing well on JIIS dataset, which aims to detect communications present in covert channels. Its accuracy in detection is 89%, with f1-score of 85%.
 
 
-## Run the code
+## Run the code on JIIS dataset,
 - Dataset of JIIS23 is contained in /transformer_model/dataset/JIIS23-23-dataset-main/case1/ folder.
 - To run the code, run main.py file.
 - The data_reader.py file reads data present in sql folder.
@@ -16,5 +16,5 @@
 ## Capture live data:
 - For capturing the live flow of data, you need to use nProbe tool and save the captured data in mysql database.
 - Captured flow should be in UNSW-NF-v2 format.
-- run data_reader.py file to do live capturing.
+- After installing and configuring nProbe, set database details in config of data_reader.py file, and run it to do live capturing and testing.
 
