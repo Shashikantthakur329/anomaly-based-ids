@@ -1,4 +1,10 @@
-#libraries importing
+# libraries importing
+from implementations.transformers.named_transformers import *
+from implementations.transformers.basic_transformers import BasicTransformer
+from implementations.pre_processings import StandardPreProcessing
+from implementations.input_encodings import *
+from implementations.classification_heads import *
+from framework import NamedDatasetSpecifications, EvaluationDatasetSampling, FlowTransformer, FlowTransformerParameters, ModelInputSpecification, CategoricalFormat
 import pandas as pd
 import keras
 import os
@@ -9,24 +15,13 @@ import time
 import random
 
 import sys
-sys.path.insert(0,'/home/toor/miniproject_ddos/codes/learning_code/transformer_model/lib')
-import os
-import keras
-import pandas as pd
+sys.path.insert(
+    0, '~/transformer_model/lib')
 
 try:
     from tensorflow._api.v2.v2 import keras
 except ImportError:
     from tensorflow import keras
-
-
-#modules importing
-from framework import NamedDatasetSpecifications, EvaluationDatasetSampling, FlowTransformer, FlowTransformerParameters, ModelInputSpecification, CategoricalFormat
-from implementations.classification_heads import *
-from implementations.input_encodings import *
-from implementations.pre_processings import StandardPreProcessing
-from implementations.transformers.basic_transformers import BasicTransformer
-from implementations.transformers.named_transformers import *
 
 
 
@@ -44,10 +39,12 @@ db_config = {
 
 def random_ftp_command_ret_code_generator():
     return 100 + random.randrange(100)
+
+
 # Variable to store the last fetched id
 last_fetched_id = 0
 
-# for getting data
+# for getting data from sql-database
 def fetch_data():
     global last_fetched_id
 
@@ -56,24 +53,18 @@ def fetch_data():
             connection = pymysql.connect(**db_config)
 
             with connection.cursor() as cursor:
-                # query = "SELECT * FROM flow4_flows limit 5;"
                 query = "SELECT * FROM flow4_flows where idx > %s LIMIT 4;"
 
                 cursor.execute(query, (last_fetched_id,))
                 rows = cursor.fetchall()
                 for row in rows:
                     data_queue.put(row)
-                    #print(row)
                     last_fetched_id = max(last_fetched_id, row['idx'])
 
             connection.close()
 
         except pymysql.Error as err:
             print(f"Error: {err}")
-
-
-
-        # time.sleep(1)
 
 
 ############################
@@ -132,118 +123,66 @@ custom_obj = {
 }
 
 
-# define df
-# df = pd.read_csv("../dataset/cleansed_dataset/train/initial_dataset_1.csv")
-# dataset_name, dataset_path, dataset_specification, eval_percent, eval_method = datasets[1]
-# # ft.load_dataset(dataset_name, dataset_path, dataset_specification, evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent)
-# preprocessed_df = ft.load_dataset(dataset_name, df, dataset_specification,
-#                                   evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent)
-# print(df.head())
-# print("$$$$$$$$$$$$$$$$$")
-# print("$$$$$$$$$$$$$$$$$")
-# print("$$$$$$$$$$$$$$$$$")
-# print("$$$$$$$$$$$$$$$$$")
-# print("$$$$$$$$$$$$$$$$$")
-# print("$$$$$$$$$$$$$$$$$")
-# print(preprocessed_df.shape)
-# print(preprocessed_df.head())
-
 l_m = keras.saving.load_model("integer_encoded_model.keras",
                               compile=True, safe_mode=False, custom_objects=custom_obj)
 print(l_m.summary())
 l_m.compile(optimizer="adam", loss='binary_crossentropy',
             metrics=['binary_accuracy'])
 
-# a = ft.predict(l_m, batch_size=128)
-
 
 # for processing data from queue
 def process_data():
     # global data_queue
     while True:
-        # print("##############")
-        # print("##############")
-        # print("##############")
+
         collected_data = []
 
+        #predicting in batches of 100
         while len(collected_data) < 100:
             if not data_queue.empty():
                 data = data_queue.get(block=False)
 
-                #deleting extra values in captured data
-                # print(data['idx'])
                 data.pop('idx', None)
                 data.pop('IPV6_SRC_ADDR', None)
                 data.pop('IPV6_DST_ADDR', None)
 
-                # these values are not available in nProbe Pro. Have to take avg from dataset
-                data['DNS_QUERY_ID'] = 0
-                data['DNS_QUERY_TYPE'] = 0
-                data['DNS_TTL_ANSWER'] = 0
-                data['FTP_COMMAND_RET_CODE'] = random_ftp_command_ret_code_generator()
+                # these values are not available in nProbe Pro.
+                # data['DNS_QUERY_ID'] = 0
+                # data['DNS_QUERY_TYPE'] = 0
+                # data['DNS_TTL_ANSWER'] = 0
+                # data['FTP_COMMAND_RET_CODE'] = random_ftp_command_ret_code_generator()
+
+                # To make training and predicting df same, but Label and Attack category will not be used in prediction
                 data['Label'] = 0
                 data['Attack'] = 'Benign'
-                collected_data.append(data);
-                # print((data))
-                
-        
-        if len(collected_data) == 0 :
-           continue
+                collected_data.append(data)
 
-        string_data_list = [{key: str(value) for key, value in d.items()} for d in collected_data]
+        if len(collected_data) == 0:
+            continue
+
+        string_data_list = [
+            {key: str(value) for key, value in d.items()} for d in collected_data]
 
         # print(string_data_list)
         df = pd.DataFrame(string_data_list)
-        # del df['idx']
-        # del df['IPV6_SRC_ADDR']
-        # del df['IPV6_DST_ADDR']
-        print((df.shape))
+        # print((df.shape))
 
-    #     col_order = ['IPV4_SRC_ADDR', 'L4_SRC_PORT', 'IPV4_DST_ADDR', 'L4_DST_PORT',
-    #    'PROTOCOL', 'L7_PROTO', 'IN_BYTES', 'IN_PKTS', 'OUT_BYTES', 'OUT_PKTS',
-    #    'TCP_FLAGS', 'CLIENT_TCP_FLAGS', 'SERVER_TCP_FLAGS',
-    #    'FLOW_DURATION_MILLISECONDS', 'DURATION_IN', 'DURATION_OUT', 'MIN_TTL',
-    #    'MAX_TTL', 'LONGEST_FLOW_PKT', 'SHORTEST_FLOW_PKT', 'MIN_IP_PKT_LEN',
-    #    'MAX_IP_PKT_LEN', 'SRC_TO_DST_SECOND_BYTES', 'DST_TO_SRC_SECOND_BYTES',
-    #    'RETRANSMITTED_IN_BYTES', 'RETRANSMITTED_IN_PKTS',
-    #    'RETRANSMITTED_OUT_BYTES', 'RETRANSMITTED_OUT_PKTS',
-    #    'SRC_TO_DST_AVG_THROUGHPUT', 'DST_TO_SRC_AVG_THROUGHPUT',
-    #    'NUM_PKTS_UP_TO_128_BYTES', 'NUM_PKTS_128_TO_256_BYTES',
-    #    'NUM_PKTS_256_TO_512_BYTES', 'NUM_PKTS_512_TO_1024_BYTES',
-    #    'NUM_PKTS_1024_TO_1514_BYTES', 'TCP_WIN_MAX_IN', 'TCP_WIN_MAX_OUT',
-    #    'ICMP_TYPE', 'ICMP_IPV4_TYPE', 'DNS_QUERY_ID', 'DNS_QUERY_TYPE',
-    #    'DNS_TTL_ANSWER', 'FTP_COMMAND_RET_CODE', 'Label', 'Attack']
-    #     df = df[col_order]
-
-        # print(df.head())
+        # To solve issues related to data type
         df.to_csv('./temp.csv')
-        # print(type(df['MAX_TTL']));
-        # print(type(df))
         df1 = pd.read_csv("./temp.csv")
-        # df1 = df;
-        # print(type(df1['MAX_TTL']));
-        # print(type(df1))
 
-        # df1 = pd.read_csv("../dataset/cleansed_dataset/train/initial_dataset_1.csv")
-        # print(df1.columns)
-        # for col in df.columns:
-        #     print(col, type(col))
-        #     if type(df[col]) != type(df1[col]):
-        #         print(col)
-        dataset_name, dataset_path, dataset_specification, eval_percent, eval_method = datasets[1]
+        dataset_name, dataset_path, dataset_specification, eval_percent, eval_method = datasets[
+            1]
         # ft.load_dataset(dataset_name, dataset_path, dataset_specification, evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent)
-        preprocessed_df = ft.load_dataset(dataset_name, df1, dataset_specification,evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent)
-        # print(df.head())
-        # print(preprocessed_df.head())
-
-        # m = ft.build_model()
+        preprocessed_df = ft.load_dataset(dataset_name, df1, dataset_specification,
+                                          evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent)
 
         a = ft.predict(l_m, batch_size=128)
         # time.sleep(1)
         """
         """
 
-# print("asdasdasdasdasd")
+
 fetch_thread = threading.Thread(target=fetch_data)
 process_thread = threading.Thread(target=process_data)
 

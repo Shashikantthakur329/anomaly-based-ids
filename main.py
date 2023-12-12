@@ -42,24 +42,22 @@ transformers = [
     BERTSmallTransformer()
 ]
 
+
+#put dataset in this folder
 flow_file_path = "../dataset/cleansed_dataset/train"
 new_path = "./dataset/JIIS23-dataset-main/case1"
+
 datasets = [
     ("CSE_CIC_IDS", os.path.join(flow_file_path, "output.csv"), NamedDatasetSpecifications.unified_flow_format,0.06, EvaluationDatasetSampling.LastRows),
     # ("UNSW_2018_IoT_Botnet_Full5pc_1.csv", os.path.join(flow_file_path, "UNSW_2018_IoT_Botnet_Full5pc_1.csv"), NamedDatasetSpecifications.nsl_kdd, 0.05, EvaluationDatasetSampling.RandomRows),
     # ("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "initial_dataset.csv"), NamedDatasetSpecifications.unified_flow_format, 0.98, EvaluationDatasetSampling.LastRows)
-    # ("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "NF-UNSW-NB15-v2.csv"), NamedDatasetSpecifications.unified_flow_format, 0.1, EvaluationDatasetSampling.LastRows)
-    ("JIIS-MAIN", os.path.join(new_path, "27_filtered_33perc_stego_original.csv"), NamedDatasetSpecifications.jiis_main, 0.98, EvaluationDatasetSampling.LastRows)
+    ("NF-UNSW-NB15-v2", os.path.join(flow_file_path, "NF-UNSW-NB15-v2.csv"), NamedDatasetSpecifications.unified_flow_format, 0.1, EvaluationDatasetSampling.LastRows)
+    # ("JIIS-MAIN", os.path.join(new_path, "27_filtered_33perc_stego_original.csv"), NamedDatasetSpecifications.jiis_main, 0.98, EvaluationDatasetSampling.LastRows)
+    # ("NF-BoT-IoT", os.path.join(flow_file_path, "NF-BoT-IoT.csv"), NamedDatasetSpecifications.nf_bot_iot, 0.98, EvaluationDatasetSampling.LastRows)
 ]
 
-# NF-UNSW-NB15-v2
 
 pre_processing = StandardPreProcessing(n_categorical_levels=32)
-# categorical_format = CategoricalFormat()
-# model_input_spec = ModelInputSpecification(categorical_format=CategoricalFormat)
-######################################
-# model_input_spec=ModelInputSpecification(categorical_format=)
-
 
 # Define the transformer
 ft = FlowTransformer(pre_processing=pre_processing,
@@ -76,33 +74,21 @@ custom_obj = {
 }
 
 
-#df = pd.read_csv("../dataset/cleansed_dataset/train/NF-UNSW-NB15-v2.csv")
-#print(df.head())
-
-
 # Load the specific dataset
 df = pd.read_csv("../dataset/cleansed_dataset/train/initial_dataset_1.csv")
 dataset_name, dataset_path, dataset_specification, eval_percent, eval_method = datasets[1]
-# ft.load_dataset(dataset_name, dataset_path, dataset_specification, evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent)
-print("asdasdASDASDASDASD");
-preprocessed_df = ft.load_dataset(dataset_name, dataset_path, dataset_specification, evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent);
-print(df.head())
-print("$$$$$$$$$$$$$$$$$")
-print("$$$$$$$$$$$$$$$$$")
-print("$$$$$$$$$$$$$$$$$")
-print("$$$$$$$$$$$$$$$$$")
-print("$$$$$$$$$$$$$$$$$")
-print("$$$$$$$$$$$$$$$$$")
-print(preprocessed_df.columns)
-print(preprocessed_df.head())
-
-
+preprocessed_df = ft.load_dataset(dataset_name, dataset_path, dataset_specification, evaluation_dataset_sampling=eval_method, evaluation_percent=eval_percent)
 
 
 # Build the transformer model
 m = ft.build_model()
 #print(m.dir())
 #m.summary()
+
+
+####################
+# For prediction from loaded mdel
+####################
 """
 
 l_m = keras.saving.load_model("integer_encoded_model.keras",compile=True,safe_mode = False, custom_objects = custom_obj)
@@ -119,8 +105,7 @@ a = ft.predict(l_m, batch_size=128, epochs=20, steps_per_epoch=64, early_stoppin
 """
 
 
-"""
-"""
+
 m.compile(optimizer="adam", loss='binary_crossentropy', metrics=['binary_accuracy'], jit_compile=True)
 
 # Get the evaluation results
@@ -130,15 +115,3 @@ print(eval_results)
 
 m.save('./JIIS.keras')
 
-
-
-
-
-
-
-
-
-## Prediction results : 
-# 11 inputs needed for prediction...
-# 41 input : 3 predictions
-# 42 input : 4 predictions

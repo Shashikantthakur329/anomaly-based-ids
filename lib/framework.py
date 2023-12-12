@@ -174,13 +174,21 @@ class NamedDatasetSpecifications:
         class_column='attack',
         benign_label='No',
     )
-    # bot_iot = DatasetSpecification(
-    #     include_fields=['Dpkts','Sbytes','Dbytes','Rate','Srate','Drate','TnBPSrcIP','TnBPDstIP','TnP_PSrcIP','TnP_PDstIP','TnP_PerProto','TnP_Per_Dport','AR_P_Proto_P_SrcIP','AR_P_Proto_P_DstIP','N_IN_Conn_P_SrcIP','N_IN_Conn_P_DstIP','AR_P_Proto_P_Sport','AR_P_Proto_P_Dport','Pkts_P_State_P_Protocol_P_DestIP','Pkts_P_State_P_Protocol_P_SrcIP','Attack','Category','Subcategory'],
-    #     categorical_fields=['protocol_type', 'service', 'flag', 'land', 'logged_in', 'is_host_login', 'is_guest_login'],
-    #     benign_label='normal',
-    #     class_column='class',
-    #     test_column='is_test'
-    #     )
+
+    bot_iot = DatasetSpecification(
+        include_fields=['Dpkts','Sbytes','Dbytes','Rate','Srate','Drate','TnBPSrcIP','TnBPDstIP','TnP_PSrcIP','TnP_PDstIP','TnP_PerProto','TnP_Per_Dport','AR_P_Proto_P_SrcIP','AR_P_Proto_P_DstIP','N_IN_Conn_P_SrcIP','N_IN_Conn_P_DstIP','AR_P_Proto_P_Sport','AR_P_Proto_P_Dport','Pkts_P_State_P_Protocol_P_DestIP','Pkts_P_State_P_Protocol_P_SrcIP','Attack','Category','Subcategory'],
+        categorical_fields=['protocol_type', 'service', 'flag', 'land', 'logged_in', 'is_host_login', 'is_guest_login'],
+        benign_label='normal',
+        class_column='class',
+        test_column='is_test'
+        )
+    
+    nf_bot_iot = DatasetSpecification(
+            include_fields=['IN_BYTES','OUT_BYTES' ,'IN_PKTS' ,'OUT_PKTS'],
+            categorical_fields=['L4_SRC_PORT', 'PROTOCOL','TCP_FLAGS', 'L4_DST_PORT', 'L7_PROTO'],
+            class_column="Attack",
+            benign_label="Benign"
+        )
 
 
 
@@ -642,62 +650,6 @@ class FlowTransformer:
 
                 return featurewise_X, overall_y_preserve
  
-        # batch_yielder = BatchYielder(self.parameters._train_ensure_flows_are_ordered_within_windows, not self.parameters._train_draw_sequential_windows, self.rs)
-
-        # min_loss = 100
-        # iters_since_loss_decrease = 0
-
-        # train_results = []
-        # final_epoch = 0
-
-        # last_print = time.time()
-        # elapsed_time = 0
-
-        # for epoch in range(epochs):
-        #     final_epoch = epoch
-
-        #     has_reduced_loss = False
-        #     for step in range(steps_per_epoch):
-        #         batch_X, batch_y = batch_yielder.get_batch()
-
-        #         t0 = time.time()
-        #         batch_results = m.train_on_batch(batch_X, batch_y)
-        #         t1 = time.time()
-
-        #         if epoch > 0 or step > 0:
-        #             elapsed_time += (t1 - t0)
-        #             if epoch == 0 and step == 1:
-        #                 # include time for last "step" that we skipped with step > 0 for epoch == 0
-        #                 elapsed_time *= 2
-
-        #         train_results.append(batch_results + [elapsed_time, epoch])
-
-        #         batch_loss = batch_results[0] if isinstance(batch_results, list) else batch_results
-
-        #         if time.time() - last_print > 3:
-        #             last_print = time.time()
-        #             early_stop_phrase = "" if early_stopping_patience <= 0 else f" (early stop in {early_stopping_patience - iters_since_loss_decrease:,})"
-        #             print(f"Epoch = {epoch:,} / {epochs:,}{early_stop_phrase}, step = {step}, loss = {batch_loss:.5f}, results = {batch_results} -- elapsed (train): {elapsed_time:.2f}s")
-
-        #         if batch_loss < min_loss:
-        #             has_reduced_loss = True
-        #             min_loss = batch_loss
-
-        #     if has_reduced_loss:
-        #         iters_since_loss_decrease = 0
-        #     else:
-        #         iters_since_loss_decrease += 1
-
-        #     do_early_stop = early_stopping_patience > 0 and iters_since_loss_decrease > early_stopping_patience
-        #     is_last_epoch = epoch == epochs - 1
-        #     run_eval = epoch in [6] or is_last_epoch or do_early_stop
-
-        #     if run_eval:
-        #         run_evaluation(epoch)
-
-        #     if do_early_stop:
-        #         print(f"Early stopping at epoch: {epoch}")
-        #         break
 
         eval_results = pd.DataFrame(epoch_results)
         print(eval_results)
